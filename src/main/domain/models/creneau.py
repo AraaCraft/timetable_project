@@ -6,12 +6,17 @@ from datetime import datetime, timedelta, time
 import datetime as dt
 
 class Creneau(SQLModel, table=True):
-    # L'ID est optionnel car SQLite le génère tout seul
     id: Optional[int] = Field(default=None, primary_key=True)
-    id_cours: int
-    id_intervenant: int
-    id_salle: int
+    
+    # Informations descriptives
+    intitule_cours: str # Ex: "Algorithmique"
+    nom_enseignant: str # Ex: "M. Dijon"
+    nom_salle: str      # Ex: "Salle 1"
+    
+    # Identifiants de liaison
     id_promotion: int
+    id_salle: int
+    
     horodatage_debut: datetime
     horodatage_fin: datetime
 
