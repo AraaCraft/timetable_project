@@ -1,15 +1,18 @@
-from datetime import datetime, time, timedelta
+from sqlmodel import SQLModel, Field
+from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic import field_validator, model_validator
+from datetime import datetime, timedelta, time
 
-class Creneau(BaseModel):
-    id: Optional[int] = Field(default=None)
-    horodatage_debut: datetime
-    horodatage_fin: datetime
+class Creneau(SQLModel, table=True):
+    # L'ID est optionnel car SQLite le génère tout seul
+    id: Optional[int] = Field(default=None, primary_key=True)
     id_cours: int
     id_intervenant: int
     id_salle: int
     id_promotion: int
+    horodatage_debut: datetime
+    horodatage_fin: datetime
 
     @model_validator(mode='after')
     def valider_regles_metier(self) -> 'Creneau':
