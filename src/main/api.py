@@ -1,8 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from src.main.domain.models import Creneau, Planning
 from src.main.domain.services.planning_service import service_planning
+from src.main.infrastructure.database import init_db
 
 app = FastAPI(title="Timetable API - Session 2")
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
 
 @app.post("/planning/programmer", response_model=Creneau, tags=["Gestion"])
 def programmer_cours(nouveau_creneau: Creneau):

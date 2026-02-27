@@ -1,35 +1,47 @@
+from sqlmodel import Session, select
 from typing import List
+from src.main.infrastructure.database import engine
 from src.main.domain.models import Creneau
 
 class PlanningService:
-    def __init__(self):
-        # La base de données temporaire se déplace ici
-        self.db_creneaux: List[Creneau] = []
-        self._compteur_id = 1
-
-    def verifier_collision_promo(self, nouveau: Creneau) -> bool:
+    def verifier_collision_promo(self, session: Session, nouveau: Creneau) -> bool:
         """
-        BONUS : Vérifie si la promotion est déjà occupée sur ce créneau.
+        Vérifie si la promotion est déjà occupée.
+        On passe la 'session' en argument pour faire la requête SQL.
         """
-        for existant in self.db_creneaux:
-            if existant.id_promotion == nouveau.id_promotion:
-                # Vérification du chevauchement d'horaires
-                if (nouveau.horodatage_debut < existant.horodatage_fin and 
-                    nouveau.horodatage_fin > existant.horodatage_debut):
-                    return True # Il y a une collision !
+        statement = select(Creneau).where(
+            Creneau.id_promotion == nouveau.id_promotion
+        )
+        creneaux_existants = session.exec(statement).all()
+        
+        for existant in creneaux_existants:
+            if (nouveau.horodatage_debut < existant.horodatage_fin and 
+                nouveau.horodatage_fin > existant.horodatage_debut):
+                return True
         return False
 
     def ajouter_creneau(self, creneau: Creneau) -> Creneau:
-        if self.verifier_collision_promo(creneau):
-            raise ValueError("La promotion a déjà un cours sur ce créneau horaire.")
-        
-        creneau.id = self._compteur_id
-        self._compteur_id += 1
-        self.db_creneaux.append(creneau)
-        return creneau
+        # On ouvre une session de base de données
+        with Session(engine) as session:
+            if self.verifier_collision_promo(session, creneau):
+                raise ValueError("La promotion a déjà un cours sur ce créneau horaire.")
+            
+            session.add(creneau) # On prépare l'ajout
+            session.commit()      # On enregistre dans le fichier .db
+            session.refresh(creneau) # On récupère l'ID généré par SQLite
+            return creneau
 
+    # def recuperer_planning_semaine(self, id_promo: int) -> List[Creneau]:
+    #     with Session(engine) as session:
+    #         statement = select(Creneau).where(Creneau.id_promotion == id_promo)
+    #         return session.exec(statement).all()
     def recuperer_planning_semaine(self, id_promo: int) -> List[Creneau]:
-        return [c for c in self.db_creneaux if c.id_promotion == id_promo]
+        with Session(engine) as session:
+        # On demande TOUS les créneaux de cette promo, peu importe la semaine
+            statement = select(Creneau).where(Creneau.id_promotion == id_promo)
+            resultats = session.exec(statement).all()
+            print(f"DEBUG: Nombre de créneaux trouvés en base : {len(resultats)}")
+            return resultats
 
-# On crée une instance unique (Singleton) pour toute l'appli
+# Instance unique
 service_planning = PlanningService()
