@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime
 from src.main.domain.models import Creneau
+from src.main.domain.services.planning_service import PlanningService
 
 # ==========================================
 # DONNÉES DE BASE (Fixtures / Helpers)
@@ -81,3 +82,22 @@ def test_cours_le_week_end():
     
     with pytest.raises(ValueError, match="du Lundi au Vendredi"):
         Creneau(**data)
+
+
+def test_collision_promotion_impossible():
+    """Test Bonus : On ne peut pas mettre deux cours en même temps pour la même promo."""
+    service = PlanningService() # On teste le service directement
+    
+    data1 = base_creneau_data() # Lundi 10h-12h
+    c1 = Creneau(**data1)
+    service.ajouter_creneau(c1)
+    
+    # On essaie d'ajouter un cours qui commence à 11h (pendant le premier)
+    data2 = data1.copy()
+    data2["horodatage_debut"] = datetime(2026, 3, 2, 11, 0)
+    data2["horodatage_fin"] = datetime(2026, 3, 2, 13, 0)
+    c2 = Creneau(**data2)
+    
+    import pytest
+    with pytest.raises(ValueError, match="La promotion a déjà un cours"):
+        service.ajouter_creneau(c2)
