@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 from pydantic import field_validator, model_validator
 from datetime import datetime, timedelta, time
+import datetime as dt
 
 class Creneau(SQLModel, table=True):
     # L'ID est optionnel car SQLite le génère tout seul
@@ -16,6 +17,14 @@ class Creneau(SQLModel, table=True):
 
     @model_validator(mode='after')
     def valider_regles_metier(self) -> 'Creneau':
+        # --- FIX POUR SQLMODEL / SQLITE ---
+        # Si SQLModel nous donne du texte, on le transforme en vraie date
+        if isinstance(self.horodatage_debut, str):
+            self.horodatage_debut = dt.datetime.fromisoformat(self.horodatage_debut)
+        if isinstance(self.horodatage_fin, str):
+            self.horodatage_fin = dt.datetime.fromisoformat(self.horodatage_fin)
+        # ----------------------------------
+
         # 1. Cohérence de base
         if self.horodatage_fin <= self.horodatage_debut:
             raise ValueError("L'heure de fin doit être strictement après l'heure de début.")
