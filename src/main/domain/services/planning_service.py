@@ -1,34 +1,38 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_
 from typing import List
 from src.main.infrastructure.database import engine
 from src.main.domain.models import Creneau
 
 class PlanningService:
-    def verifier_collision_promo(self, session: Session, nouveau: Creneau) -> bool:
+    def verifier_disponibilite(self, session: Session, nouveau: Creneau) -> None:
         """
-        Vérifie si la promotion est déjà occupée.
-        On passe la 'session' en argument pour faire la requête SQL.
+        Vérifie si la salle OU la promo est déjà occupée.
         """
+        # On cherche les créneaux qui concernent SOIT la même promo, SOIT la même salle
         statement = select(Creneau).where(
-            Creneau.id_promotion == nouveau.id_promotion
+            or_(
+                Creneau.id_promotion == nouveau.id_promotion,
+                Creneau.id_salle == nouveau.id_salle
+            )
         )
-        creneaux_existants = session.exec(statement).all()
+        existants = session.exec(statement).all()
         
-        for existant in creneaux_existants:
+        for existant in existants:
+            # Vérification du chevauchement d'horaires
             if (nouveau.horodatage_debut < existant.horodatage_fin and 
                 nouveau.horodatage_fin > existant.horodatage_debut):
-                return True
-        return False
+                
+                if existant.id_promotion == nouveau.id_promotion:
+                    raise ValueError(f"La promotion {nouveau.id_promotion} a déjà un cours à ce moment.")
+                if existant.id_salle == nouveau.id_salle:
+                    raise ValueError(f"La salle '{existant.nom_salle}' est déjà occupée.")
 
     def ajouter_creneau(self, creneau: Creneau) -> Creneau:
-        # On ouvre une session de base de données
         with Session(engine) as session:
-            if self.verifier_collision_promo(session, creneau):
-                raise ValueError("La promotion a déjà un cours sur ce créneau horaire.")
-            
-            session.add(creneau) # On prépare l'ajout
-            session.commit()      # On enregistre dans le fichier .db
-            session.refresh(creneau) # On récupère l'ID généré par SQLite
+            self.verifier_disponibilite(session, creneau)
+            session.add(creneau)
+            session.commit()
+            session.refresh(creneau)
             return creneau
 
     # def recuperer_planning_semaine(self, id_promo: int) -> List[Creneau]:
