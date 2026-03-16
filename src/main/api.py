@@ -15,24 +15,32 @@ CLE_SECRETE = os.getenv("API_KEY", "azerty1234")
 # On définit le nom du "badge" que l'utilisateur doit présenter dans l'en-tête HTTP
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
 
+
 def verifier_autorisation(cle_fournie: str = Security(api_key_header)):
     """Vérifie si la clé fournie par l'utilisateur correspond au mot de passe."""
     if cle_fournie != CLE_SECRETE:
-        raise HTTPException(status_code=403, detail="Accès refusé : Clé d'API invalide.")
+        raise HTTPException(
+            status_code=403, detail="Accès refusé : Clé d'API invalide."
+        )
     return cle_fournie
+
+
 # ------------------------------------
+
 
 @app.on_event("startup")
 def on_startup():
     init_db()
 
+
 # --- ROUTES PROTÉGÉES (Nécessitent la clé d'API) ---
 
+
 @app.post(
-    "/planning/programmer", 
-    response_model=Creneau, 
-    tags=["Gestion"], 
-    dependencies=[Depends(verifier_autorisation)]
+    "/planning/programmer",
+    response_model=Creneau,
+    tags=["Gestion"],
+    dependencies=[Depends(verifier_autorisation)],
 )
 def programmer_cours(nouveau_creneau: Creneau):
     try:
@@ -41,10 +49,11 @@ def programmer_cours(nouveau_creneau: Creneau):
         # On renvoie une erreur propre si le bonus collision est déclenché
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @app.patch(
-    "/planning/{id_creneau}/annuler", 
+    "/planning/{id_creneau}/annuler",
     tags=["Gestion"],
-    dependencies=[Depends(verifier_autorisation)]
+    dependencies=[Depends(verifier_autorisation)],
 )
 def annuler_cours(id_creneau: int):
     """
@@ -60,7 +69,12 @@ def annuler_cours(id_creneau: int):
 
 # --- ROUTE PUBLIQUE (Consultation libre) ---
 
-@app.get("/planning/consultation/{id_promo}/{semaine}", response_model=Planning, tags=["Consultation"])
+
+@app.get(
+    "/planning/consultation/{id_promo}/{semaine}",
+    response_model=Planning,
+    tags=["Consultation"],
+)
 def consulter_planning_promo(id_promo: int, semaine: int):
     creneaux = service_planning.recuperer_planning_semaine(id_promo)
     return Planning(id_promotion=id_promo, semaine=semaine, creneaux=creneaux)
