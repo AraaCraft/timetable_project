@@ -21,3 +21,15 @@ def programmer_cours(nouveau_creneau: Creneau):
 def consulter_planning_promo(id_promo: int, semaine: int):
     creneaux = service_planning.recuperer_planning_semaine(id_promo)
     return Planning(id_promotion=id_promo, semaine=semaine, creneaux=creneaux)
+
+@app.patch("/planning/{id_creneau}/annuler")
+def annuler_cours(id_creneau: int):
+    """
+    Annule un cours existant en passant son statut 'est_annule' à True.
+    """
+    try:
+        cours_annule = service_planning.annuler_creneau(id_creneau)
+        return {"message": "Le cours a été annulé avec succès", "cours": cours_annule}
+    except ValueError as e:
+        # On intercepte les erreurs de notre service (ex: ID introuvable, déjà annulé)
+        raise HTTPException(status_code=400, detail=str(e))
