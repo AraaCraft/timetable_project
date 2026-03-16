@@ -1,10 +1,3 @@
-Oups ! Effectivement, j'ai eu un petit raté sur l'arborescence visuelle dans le bloc précédent. C'était un peu brouillon. 😅
-
-Voici la version **propre et corrigée** pour ton README, qui correspond exactement à tes captures d'écran (avec `domain` bien détaillé en `models` et `services`) :
-
----
-
-```markdown
 # Timetable Project 📅
 
 Projet réalisé en binôme dans le cadre du cours de Programmation Web (DEUST IOSI 2ème année). 
