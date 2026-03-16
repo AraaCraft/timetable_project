@@ -1,9 +1,9 @@
 # Généré avec pip freeze > requirements.txt
 
-'''Le cœur de l API : fastapi, uvicorn, pydantic.
-La base de données : sqlmodel et SQLAlchemy.
-La qualité et les tests : pytest, flake8, bandit, et coverage.
-Le bonus : rich (pour avoir des logs colorés et lisibles) et watchfiles (pour le mode --reload).'''
+#Le cœur de l API : fastapi, uvicorn, pydantic.
+# La base de données : sqlmodel et SQLAlchemy.
+# La qualité et les tests : pytest, flake8, bandit, et coverage.
+# Le bonus : rich (pour avoir des logs colorés et lisibles) et watchfiles (pour le mode --reload).
 
 annotated-doc==0.0.4
 annotated-types==0.7.0
