@@ -1,14 +1,20 @@
-from sqlmodel import SQLModel, create_engine, Session
 import os
+from sqlmodel import SQLModel, create_engine, Session
+from dotenv import load_dotenv
 
-# Crée le chemin vers la base de données à la racine du projet
-base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-sqlite_url = f"sqlite:///{os.path.join(base_dir, 'database.db')}"
+# 1. On charge les variables cachées dans le fichier .env
+load_dotenv()
 
-engine = create_engine(sqlite_url, echo=True)
+# 2. On récupère l'URL (avec SQLite en valeur par défaut au cas où le .env manque)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///database.db")
+
+# 3. Petite subtilité pour SQLite et FastAPI (pour éviter les erreurs de threads)
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+
+# 4. On crée le moteur une seule fois pour toute l'application
+engine = create_engine(DATABASE_URL, echo=True, connect_args=connect_args)
 
 def init_db():
-    # Cette commande crée le fichier database.db et les tables
     SQLModel.metadata.create_all(engine)
 
 def get_session():

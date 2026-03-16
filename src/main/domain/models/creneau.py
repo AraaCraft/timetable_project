@@ -1,7 +1,6 @@
 from sqlmodel import SQLModel, Field
-from datetime import datetime
 from typing import Optional
-from pydantic import field_validator, model_validator
+from pydantic import model_validator
 from datetime import datetime, timedelta, time
 import datetime as dt
 
@@ -10,8 +9,11 @@ class Creneau(SQLModel, table=True):
     
     # Informations descriptives
     intitule_cours: str # Ex: "Algorithmique"
-    nom_enseignant: str # Ex: "M. Dijon"
-    nom_salle: str      # Ex: "Salle 1"
+    
+    # L'enseignant devient optionnel car un cours peut être en autonomie
+    nom_enseignant: Optional[str] = None 
+    
+    nom_salle: str      # Ex: "Salle 1" ou "Fablab"
     
     # Identifiants de liaison
     id_promotion: int
@@ -19,6 +21,8 @@ class Creneau(SQLModel, table=True):
     
     horodatage_debut: datetime
     horodatage_fin: datetime
+    est_autonome: bool = False
+    est_annule: bool = False
 
     @model_validator(mode='after')
     def valider_regles_metier(self) -> 'Creneau':
@@ -56,5 +60,15 @@ class Creneau(SQLModel, table=True):
         # 5. Règle métier : Du Lundi (0) au Vendredi (4)
         if self.horodatage_debut.weekday() > 4:
             raise ValueError("Les cours ne peuvent avoir lieu que du Lundi au Vendredi.")
+
+        # 6. Règle métier : Autonomie vs Cours dirigé
+        # Si le cours n'est PAS autonome, alors il FAUT un enseignant
+        if not self.est_autonome and not self.nom_enseignant:
+            raise ValueError("Un nom d'enseignant est obligatoire si le cours n'est pas en autonomie.")
+
+        # 7. Règle métier : Salle spécifique (Exemple du Fablab)
+        # Si le mot "fablab" est dans le titre du cours, il doit être dans le Fablab
+        if "fablab" in self.intitule_cours.lower() and "fablab" not in self.nom_salle.lower():
+            raise ValueError("Un cours nécessitant le Fablab doit impérativement se dérouler dans la salle Fablab.")
 
         return self

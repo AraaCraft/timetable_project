@@ -3,9 +3,17 @@ venv/
 .venv/
 env/
 
+<<<<<<< HEAD
 # Base de données (Local seulement !)
 *.db
 *.sqlite
+=======
+
+# Base de données
+*.db
+*.sqlite
+.env
+>>>>>>> 905d633ff2e5155ee763af53cfa797d9308b3b31
 
 # Cache Python
 __pycache__/
