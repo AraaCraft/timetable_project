@@ -1,7 +1,7 @@
 """
 Couche de Présentation / Routage (API).
 
-Architecture (Clean Architecture) :
+Choix architectural (Clean Architecture) :
 Ce fichier ne contient AUCUNE logique métier. Son seul rôle est d'agir comme 
 un "contrôleur" : il reçoit les requêtes HTTP, vérifie les autorisations, 
 délègue le travail complexe au 'PlanningService', et traduit les résultats 
@@ -24,15 +24,18 @@ from src.main.infrastructure.database import init_db
 # du serveur en limitant sa taille à 5 Mo et en archivant les 3 derniers.
 log_handler = RotatingFileHandler(
     "app.log", 
-    maxBytes=5 * 1024 * 1024,
-    backupCount=3,
+    maxBytes=5 * 1024 * 1024,  # 5 Mo en octets
+    backupCount=3,             # Garde app.log.1, app.log.2, app.log.3
     encoding="utf-8"
 )
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[log_handler, logging.StreamHandler()]
+    handlers=[
+        log_handler,
+        logging.StreamHandler()  # Garde l'affichage console pour le debug
+    ]
 )
 logger = logging.getLogger("timetable-api")
 # -----------------------------------------------
@@ -56,13 +59,11 @@ def verifier_autorisation(cle_fournie: str = Security(api_key_header)):
         )
     return cle_fournie
 
-
 @app.on_event("startup")
 def on_startup():
     """Événement déclenché automatiquement au démarrage du serveur."""
     logger.info("Démarrage de l'API et initialisation de la base de données") 
     init_db()
-
 
 # --- ROUTES DE L'API ---
 
@@ -73,9 +74,7 @@ def on_startup():
     dependencies=[Depends(verifier_autorisation)],
 )
 def programmer_cours(nouveau_creneau: Creneau):
-    """
-    Route de création d'un créneau. Protégée par la clé d'API.
-    """
+    """Route de création d'un créneau. Protégée par la clé d'API."""
     try:
         # On délègue toute la logique au Service Layer
         resultat = service_planning.ajouter_creneau(nouveau_creneau)
@@ -86,7 +85,6 @@ def programmer_cours(nouveau_creneau: Creneau):
         logger.error(f"Erreur de programmation : {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @app.patch(
     "/planning/{id_creneau}/annuler",
     tags=["Gestion"],
@@ -95,7 +93,7 @@ def programmer_cours(nouveau_creneau: Creneau):
 def annuler_cours(id_creneau: int):
     """
     Route d'annulation (Soft Delete).
-     Modifie partiellement la ressource (est_annule=True) 
+    Modifie partiellement la ressource (est_annule=True) 
     au lieu de la supprimer physiquement (DELETE).
     """
     try:
@@ -105,7 +103,6 @@ def annuler_cours(id_creneau: int):
     except ValueError as e:
         logger.warning(f"Échec de l'annulation pour l'ID {id_creneau} : {str(e)}") 
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @app.get(
     "/planning/consultation/{id_promo}/{semaine}",

@@ -13,6 +13,10 @@ env/
 *.db
 *.sqlite
 .env
+
+# Logs
+*.log
+app.log*
 >>>>>>> 905d633ff2e5155ee763af53cfa797d9308b3b31
 
 # Cache Python
