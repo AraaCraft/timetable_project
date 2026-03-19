@@ -96,6 +96,22 @@ class PlanningService:
 
             return cours
 
+    def recuperer_planning_semaine(self, id_promotion: int, semaine: int = None) -> list[Creneau]:
+        """
+        Récupère tous les créneaux d'une promotion spécifique.
+        Dans une vraie application de production, on utiliserait le paramètre 'semaine' 
+        pour filtrer les dates via SQLite. Pour notre prototype, on renvoie 
+        les créneaux actifs de la promotion.
+        """
+        with Session(engine) as session:
+            # On cherche les cours de la promo qui ne sont pas annulés
+            statement = select(Creneau).where(
+                Creneau.id_promotion == id_promotion,
+                Creneau.est_annule == False  # noqa: E712
+            )
+            creneaux = session.exec(statement).all()
+            return creneaux
+        
 # Implémentation du pattern Singleton.
 # On exporte une instance unique du service. Cela évite de réinstancier 
 # la classe à chaque requête HTTP, optimisant ainsi la mémoire de notre API.

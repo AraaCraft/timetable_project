@@ -13,6 +13,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, HTTPException, Security, Depends
 from fastapi.security.api_key import APIKeyHeader
+from dotenv import load_dotenv
+from pathlib import Path
 
 from src.main.domain.models import Creneau, Planning
 from src.main.domain.services.planning_service import service_planning
@@ -41,6 +43,33 @@ logger = logging.getLogger("timetable-api")
 # -----------------------------------------------
 
 app = FastAPI(title="Timetable API - Session 2")
+
+# On définit le chemin de la racine (2 niveaux au-dessus de api.py)
+base_dir = Path(__file__).resolve().parent.parent.parent.parent
+env_path = base_dir / '.env'
+
+load_dotenv(dotenv_path=env_path)
+
+# On cherche le fichier .env dans le dossier courant
+load_dotenv() 
+
+# Si ça ne marche pas, on force la lecture du fichier au cas où il est un dossier au dessus
+if not os.getenv("API_KEY"):
+    load_dotenv("../.env")
+if not os.getenv("API_KEY"):
+    load_dotenv("../../.env")
+
+CLE_SECRETE = os.getenv("API_KEY")
+
+# print(f"--- DEBUG FINAL ---")
+# print(f"Clé détectée : '{CLE_SECRETE}'")
+# print(f"-------------------")
+
+# --- DEBUG SÉCURITÉ ---
+print(f"--- DEBUG SÉCURITÉ ---")
+print(f"Chemin cherché : {env_path}")
+print(f"Fichier trouvé ? : {env_path.exists()}")
+print(f"Clé chargée : '{os.getenv('API_KEY')}'")
 
 # --- CONFIGURATION DE LA SÉCURITÉ ---
 CLE_SECRETE = os.getenv("API_KEY")
@@ -114,5 +143,5 @@ def consulter_planning_promo(id_promo: int, semaine: int):
     Route publique (pas de clé d'API requise).
     Retourne l'agrégation des créneaux formatée dans le modèle 'Planning'.
     """
-    creneaux = service_planning.recuperer_planning_semaine(id_promo)
+    creneaux = service_planning.recuperer_planning_semaine(id_promo, semaine)
     return Planning(id_promotion=id_promo, semaine=semaine, creneaux=creneaux)
