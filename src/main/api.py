@@ -1,4 +1,5 @@
 import os
+import logging 
 from fastapi import FastAPI, HTTPException, Security, Depends
 from fastapi.security.api_key import APIKeyHeader
 
@@ -6,35 +7,46 @@ from src.main.domain.models import Creneau, Planning
 from src.main.domain.services.planning_service import service_planning
 from src.main.infrastructure.database import init_db
 
+# --- CONFIGURATION DES LOGS ---
+import logging
+from logging.handlers import RotatingFileHandler
+
+# Configuration de la rotation : 5 Mo maximum, on garde 3 archives
+log_handler = RotatingFileHandler(
+    "app.log", 
+    maxBytes=5 * 1024 * 1024,  # 5 Mo en octets
+    backupCount=3,             # Garde app.log.1, app.log.2, app.log.3
+    encoding="utf-8"
+)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        log_handler,
+        logging.StreamHandler()  # Garde l'affichage console
+    ]
+)
+logger = logging.getLogger("timetable-api")
+# ------------------------------
+
 app = FastAPI(title="Timetable API - Session 2")
 
-# --- CONFIGURATION DE LA SÉCURITÉ ---
-# On va chercher le mot de passe dans le .env (ou on met une valeur par défaut)
-CLE_SECRETE = os.getenv("API_KEY", "azerty1234")
-
-# On définit le nom du "badge" que l'utilisateur doit présenter dans l'en-tête HTTP
+CLE_SECRETE = os.getenv("API_KEY")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
 
-
 def verifier_autorisation(cle_fournie: str = Security(api_key_header)):
-    """Vérifie si la clé fournie par l'utilisateur correspond au mot de passe."""
     if cle_fournie != CLE_SECRETE:
+        logger.warning(f"Tentative d'accès refusée avec la clé : {cle_fournie[:3]}***") 
         raise HTTPException(
             status_code=403, detail="Accès refusé : Clé d'API invalide."
         )
     return cle_fournie
 
-
-# ------------------------------------
-
-
 @app.on_event("startup")
 def on_startup():
+    logger.info("Démarrage de l'API et initialisation de la base de données") 
     init_db()
-
-
-# --- ROUTES PROTÉGÉES (Nécessitent la clé d'API) ---
-
 
 @app.post(
     "/planning/programmer",
@@ -44,11 +56,12 @@ def on_startup():
 )
 def programmer_cours(nouveau_creneau: Creneau):
     try:
-        return service_planning.ajouter_creneau(nouveau_creneau)
+        resultat = service_planning.ajouter_creneau(nouveau_creneau)
+        logger.info(f"Nouveau cours programmé : ID {resultat.id} pour la promo {nouveau_creneau.id_promotion}")
+        return resultat
     except ValueError as e:
-        # On renvoie une erreur propre si le bonus collision est déclenché
+        logger.error(f"Erreur de programmation : {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @app.patch(
     "/planning/{id_creneau}/annuler",
@@ -56,19 +69,13 @@ def programmer_cours(nouveau_creneau: Creneau):
     dependencies=[Depends(verifier_autorisation)],
 )
 def annuler_cours(id_creneau: int):
-    """
-    Annule un cours existant en passant son statut 'est_annule' à True.
-    """
     try:
         cours_annule = service_planning.annuler_creneau(id_creneau)
+        logger.info(f"Cours annulé avec succès : ID {id_creneau}") 
         return {"message": "Le cours a été annulé avec succès", "cours": cours_annule}
     except ValueError as e:
-        # On intercepte les erreurs de notre service (ex: ID introuvable, déjà annulé)
+        logger.warning(f"Échec de l'annulation pour l'ID {id_creneau} : {str(e)}") 
         raise HTTPException(status_code=400, detail=str(e))
-
-
-# --- ROUTE PUBLIQUE (Consultation libre) ---
-
 
 @app.get(
     "/planning/consultation/{id_promo}/{semaine}",
